@@ -304,6 +304,8 @@ class TestCatalogResolution:
         assert resolve_profile_model_id("HEM-7280T-D") == "HEM-7322T"
         assert resolve_profile_model_id("HEM-6161T-D") == "HEM-6161T"
         assert resolve_profile_model_id("HEM-7149T2-E") == "HEM-716BT2"
+        assert resolve_profile_model_id("HEM-7035T2-SH") == "HEM-7142T2"
+        assert resolve_profile_model_id("U705T") == "HEM-7142T2"
 
     def test_all_readme_supported_models_are_resolvable_and_in_dropdown(self):
         readme_models = [

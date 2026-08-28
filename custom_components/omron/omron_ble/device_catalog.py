@@ -1313,6 +1313,7 @@ CANONICAL_DEVICE_PROFILES: dict[str, DeviceConfig] = {
         },
         record_parser=RecordParser.CLASSIC_VITAL_14,
         equivalent_model_ids=(
+            "HEM-7035T2-SH",
             "HEM-7138K-SH",
             "HEM-7140T1-AP",
             "HEM-7141T1-AP",
@@ -1321,6 +1322,7 @@ CANONICAL_DEVICE_PROFILES: dict[str, DeviceConfig] = {
             "HEM-7142T2-Z",
             "HEM-7142T2-ZAZ",
             "HEM-7142T2_JAZ",
+            "U705T",
         ),
     ),
 }
