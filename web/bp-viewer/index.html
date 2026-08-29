@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Omron BLE reader</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">hass-omron</div>
+    <h1>Read the cuff over Bluetooth</h1>
+    <p class="lede">Chrome-only. The cuff can only stay paired with one host. Unpair it from the Omron app first, then hold Bluetooth until <strong>-P-</strong> blinks.</p>
+
+    <section class="panel">
+      <h2>Device</h2>
+      <label for="model">Profile</label>
+      <select id="model"></select>
+      <p class="lede" style="margin:8px 0 0;font-size:13px">U705T uses the HEM-7142T2 modern stack (FE4A + token unlock).</p>
+      <div class="row">
+        <button id="btnConnect" type="button">Connect &amp; download</button>
+        <button id="btnDisconnect" class="secondary" type="button" disabled>Disconnect</button>
+      </div>
+      <div class="row">
+        <button id="btnTime" class="secondary" type="button" disabled>Set cuff clock</button>
+      </div>
+      <div id="bleStatus" class="status"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Saved on this device</h2>
+      <p class="lede" style="margin:0 0 8px;font-size:13px">Downloads stay in this browser after you close the tab. New pulls merge with what is already saved.</p>
+      <div class="row">
+        <button id="btnCsv" class="secondary" type="button">CSV</button>
+        <button id="btnJson" class="secondary" type="button">JSON</button>
+      </div>
+      <div class="row">
+        <button id="btnClear" class="secondary" type="button">Clear saved</button>
+      </div>
+    </section>
+  </aside>
+
+  <main class="main">
+    <div class="stats">
+      <div class="stat"><div class="k">Latest systolic</div><div class="v" id="statSys">—</div></div>
+      <div class="stat"><div class="k">Latest diastolic</div><div class="v" id="statDia">—</div></div>
+      <div class="stat"><div class="k">Latest pulse</div><div class="v" id="statPulse">—</div></div>
+      <div class="stat"><div class="k">Readings</div><div class="v" id="statCount">0</div></div>
+      <div class="stat"><div class="k">Latest rating</div><div class="v" id="statRating">—</div></div>
+      <div class="stat"><div class="k">Good / bad</div><div class="v" id="statSplit">—</div></div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-wrap">
+        <div class="chart-head">
+          <h2>Readings over time</h2>
+          <div class="legend">
+            <span><i class="swatch" style="background:#b42318"></i>Systolic</span>
+            <span><i class="swatch" style="background:#1b6b66"></i>Diastolic</span>
+            <span><i class="swatch" style="background:#8a5a12"></i>Pulse</span>
+            <span><i class="swatch line" style="background:#1b6b66"></i>120 / 80</span>
+          </div>
+        </div>
+        <canvas id="chart" width="1100" height="320"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-head">
+          <h2>Recommended ranges (ACC/AHA)</h2>
+          <div class="legend">
+            <span class="lozenge normal">Normal &lt;120/80</span>
+            <span class="lozenge elevated">Elevated</span>
+            <span class="lozenge stage1">Stage 1</span>
+            <span class="lozenge stage2">Stage 2</span>
+            <span class="lozenge crisis">Crisis</span>
+          </div>
+        </div>
+        <canvas id="guide" width="640" height="320"></canvas>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head">
+        <h2>Measurements</h2>
+        <p class="lede">Click a row to see the Home Assistant entities it feeds.</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-caret"><span class="sr-only">Expand</span></th>
+            <th>Time</th>
+            <th>User</th>
+            <th>Systolic</th>
+            <th>Diastolic</th>
+            <th>Pulse</th>
+            <th>Rating</th>
+            <th>Flags</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td class="empty" colspan="8">Connect a cuff to pull stored measurements.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="log" class="log">Ready. Use Chrome on a computer or Android phone over HTTPS or localhost.</div>
+  </main>
+  <script src="protocol.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

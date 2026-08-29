@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Omron BLE reader",
+  "version": "1.0.0",
+  "description": "Connect to an Omron blood pressure cuff over Bluetooth and download stored readings.",
+  "action": {
+    "default_title": "Omron BLE reader"
+  },
+  "background": {
+    "service_worker": "sw.js"
+  }
+}

@@ -174,5 +174,9 @@ cython_debug/
 .pypirc
 .DS_Store
 
+# Xcode
+ios/**/xcuserdata/
+ios/**/DerivedData/
+
 # Claude Code local config and session data
 .claude/
