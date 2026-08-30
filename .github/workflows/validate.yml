@@ -12,6 +12,9 @@ permissions: {}
 
 jobs:
   validate-hacs:
+    # HACS checks publishing metadata (issues enabled, repository topics), which
+    # only applies to the upstream repository that is listed in HACS.
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
