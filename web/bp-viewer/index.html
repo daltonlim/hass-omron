@@ -10,7 +10,7 @@
   <aside class="sidebar">
     <div class="brand">hass-omron</div>
     <h1>Read the cuff over Bluetooth</h1>
-    <p class="lede">Chrome-only. The cuff can only stay paired with one host. Unpair it from the Omron app first, then hold Bluetooth until <strong>-P-</strong> blinks.</p>
+    <p class="lede">Chrome or Edge only (desktop or Android). Works on GitHub Pages over HTTPS, or locally at <code>http://127.0.0.1:8765</code>. The cuff can only stay paired with one host. Unpair it from the Omron app first, then hold Bluetooth until <strong>-P-</strong> blinks.</p>
 
     <section class="panel">
       <h2>Device</h2>
@@ -29,7 +29,7 @@
 
     <section class="panel">
       <h2>Saved on this device</h2>
-      <p class="lede" style="margin:0 0 8px;font-size:13px">Downloads stay in this browser after you close the tab. New pulls merge with what is already saved.</p>
+      <p class="lede" style="margin:0 0 8px;font-size:13px">Downloads stay in this browser after you close the tab. New pulls merge with what is already saved. The cuff keeps its own copy — clear that with the monitor's memory button.</p>
       <div class="row">
         <button id="btnCsv" class="secondary" type="button">CSV</button>
         <button id="btnJson" class="secondary" type="button">JSON</button>
@@ -101,7 +101,7 @@
         </tbody>
       </table>
     </div>
-    <div id="log" class="log">Ready. Use Chrome on a computer or Android phone over HTTPS or localhost.</div>
+    <div id="log" class="log">Ready. Use Chrome or Edge on a computer or Android phone over HTTPS (including GitHub Pages) or localhost.</div>
   </main>
   <script src="protocol.js"></script>
   <script src="app.js"></script>

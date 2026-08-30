@@ -286,15 +286,14 @@ function render() {
   drawGuideChart(readings);
 }
 
+/**
+ * The cuff stores records in a ring buffer, so the same measurement can move to
+ * a different slot between downloads. Identify by timestamp and values instead,
+ * and only fall back to the slot when a record has no usable timestamp.
+ */
 function readingIdentity(rec) {
-  return [
-    rec.user,
-    rec.slot,
-    rec.datetime ? rec.datetime.toISOString() : "na",
-    rec.sys,
-    rec.dia,
-    rec.bpm,
-  ].join("|");
+  const stamp = rec.datetime ? rec.datetime.toISOString() : `slot-${rec.slot}`;
+  return [rec.user, stamp, rec.sys, rec.dia, rec.bpm].join("|");
 }
 
 function sortReadings(rows) {
@@ -309,8 +308,14 @@ function sortReadings(rows) {
 function mergeReadings(incoming) {
   const byId = new Map();
   for (const rec of readings) byId.set(readingIdentity(rec), rec);
-  for (const rec of incoming) byId.set(readingIdentity(rec), rec);
+  let added = 0;
+  for (const rec of incoming) {
+    const id = readingIdentity(rec);
+    if (!byId.has(id)) added += 1;
+    byId.set(id, rec);
+  }
   readings = sortReadings([...byId.values()]);
+  return { added, known: incoming.length - added, total: readings.length };
 }
 
 function serializeReading(rec) {
@@ -587,7 +592,7 @@ function download(name, text, type) {
 
 btnConnect.addEventListener("click", async () => {
   if (!window.isSecureContext) {
-    setStatus("Open this page via http://127.0.0.1:8765 — not as a file.", "error");
+    setStatus("Open this page over HTTPS (GitHub Pages) or http://127.0.0.1:8765 — not as a file.", "error");
     return;
   }
   btnConnect.disabled = true;
@@ -601,10 +606,18 @@ btnConnect.addEventListener("click", async () => {
     diagnostics.rssi = session.rssi;
     diagnostics.pollSeconds = session.lastPollSeconds;
     diagnostics.connected = session.connected;
-    mergeReadings(incoming);
+    const merged = mergeReadings(incoming);
     persist();
     render();
-    setStatus(`Downloaded ${incoming.length} reading(s). ${readings.length} saved.`, "ok");
+    log(
+      `Cuff held ${incoming.length} reading(s): ${merged.added} new, ${merged.known} already saved`
+    );
+    setStatus(
+      merged.added
+        ? `Added ${merged.added} new reading(s). ${merged.total} saved.`
+        : `No new readings on the cuff. ${merged.total} saved.`,
+      "ok"
+    );
     btnDisconnect.disabled = false;
     btnTime.disabled = false;
   } catch (err) {
@@ -614,6 +627,11 @@ btnConnect.addEventListener("click", async () => {
     log(String(err && err.message ? err.message : err));
     setStatus(err.message || String(err), "error");
     btnConnect.disabled = false;
+    // The download can fail with the link still up, which is enough to erase or set the clock.
+    if (session?.connected) {
+      btnDisconnect.disabled = false;
+      btnTime.disabled = false;
+    }
   }
 });
 
