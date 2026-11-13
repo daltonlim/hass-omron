@@ -2232,6 +2232,94 @@ class OmronDeviceDriver:
 
         return True
 
+    async def clear_stored_records(self, transport: OmronDeviceSession) -> int:
+        """Overwrite every measurement slot with the empty-slot marker (0xFF).
+
+        Also resets the write-cursor / unread-counter index when the profile
+        exposes a settings write mirror, matching the empty-user ``clear_value``
+        the index reader already treats as "no records".
+
+        Returns the number of measurement bytes written.
+        """
+        await transport.unlock()
+
+        bytes_written = 0
+        empty_record = 0xFF
+        for user_idx in range(self._config.num_users):
+            start_addr = self._config.user_start_addresses[user_idx]
+            total_bytes = (
+                self._config.per_user_records_count[user_idx]
+                * self._config.record_byte_size
+            )
+            if total_bytes <= 0:
+                continue
+            payload = bytearray([empty_record] * total_bytes)
+            await transport.write_memory_range(
+                start_addr,
+                payload,
+                block_size=min(total_bytes, self._config.transmission_block_size),
+            )
+            bytes_written += total_bytes
+            _LOGGER.debug(
+                "Cleared user%d records for %s at 0x%04X (%d bytes)",
+                user_idx + 1,
+                self._config.model,
+                start_addr,
+                total_bytes,
+            )
+
+        await self._reset_index_pointers(transport)
+        # Let the cuff commit EEPROM before the session closes.
+        await asyncio.sleep(1.0)
+        return bytes_written
+
+    async def _reset_index_pointers(self, transport: OmronDeviceSession) -> None:
+        """Zero unread counters and set write cursors to the empty clear_value."""
+        layout = self._config.index_pointer_layout
+        read_addr = self._config.settings_read_address
+        write_addr = self._config.settings_write_address
+        if layout is None or read_addr is None or write_addr is None:
+            return
+
+        index_size = int(layout.get("index_region_byte_size", 0))
+        user_layouts = layout.get("users", [])
+        if index_size <= 0 or not isinstance(user_layouts, list) or not user_layouts:
+            return
+
+        ptr_endian = str(layout.get("endianness", self._config.endianness))
+        index_bytes = bytearray(
+            await transport.read_memory_range(
+                read_addr,
+                index_size,
+                min(index_size, self._config.transmission_block_size),
+            )
+        )
+
+        for user_cfg in user_layouts:
+            cursor_offset = int(user_cfg.get("write_cursor_offset", -1))
+            unread_offset = int(user_cfg.get("unread_counter_offset", -1))
+            clear_value = int(user_cfg.get("clear_value", 0x8000))
+            if 0 <= cursor_offset and cursor_offset + 2 <= len(index_bytes):
+                index_bytes[cursor_offset : cursor_offset + 2] = clear_value.to_bytes(
+                    2, ptr_endian, signed=False
+                )
+            if 0 <= unread_offset and unread_offset + 2 <= len(index_bytes):
+                index_bytes[unread_offset : unread_offset + 2] = (0).to_bytes(
+                    2, ptr_endian, signed=False
+                )
+
+        await transport.write_memory_range(
+            write_addr,
+            index_bytes,
+            block_size=len(index_bytes),
+        )
+        _LOGGER.debug(
+            "Reset index pointers for %s via settings write 0x%04X (%d bytes)",
+            self._config.model,
+            write_addr,
+            len(index_bytes),
+        )
+
     def _parse_eeprom_device_time(self, cached: bytearray) -> dt.datetime | None:
         """Parse and return the current time stored on the device (best-effort)."""
         try:

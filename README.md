@@ -22,7 +22,7 @@ A custom integration for Home Assistant to connect and poll data directly from O
 | :--- | :--- | :--- | :---: |
 | **HEM-6161T** | RS2 Intelli IT | Wrist | ✅ |
 | **HEM-6232T** | BP6350/RS7 Intelli IT | Wrist | ✅ |
-| **HEM-7142T2** | BP7150/M2 Intelli IT | Upper Arm | ✅ |
+| **HEM-7142T2** / **U705T** | BP7150/M2 Intelli IT | Upper Arm | ✅ |
 | **HEM-7146T2** | X2 Smart+ | Upper Arm | ✅ |
 | **HEM-7151T** | BP5250/M3 Comfort | Upper Arm | ✅ |
 | **HEM-7155T** | BP7350/M4 Intelli IT | Upper Arm | ✅ |
@@ -115,6 +115,10 @@ Device setup and pairing are done entirely through the Home Assistant UI.
   - **Improper Position**: `On` indicates the device was not at heart level (wrist models).
   - **Battery**: `On` when the device's batteries should be replaced.
   - **Connection**: `On` while Home Assistant is actively communicating with the monitor.
+- **Buttons**:
+  - **Refresh Data**: poll the cuff immediately.
+  - **Retry Pairing**: re-run BLE pairing/bonding.
+  - **Clear Memory**: overwrite every stored measurement slot on the cuff with empty markers (and reset the index cursor when the profile supports it). Home Assistant still shows the last known sensor values until a newer reading arrives; wipe the LCD history with the monitor's Memory button if you also need that cleared.
 
 ## Blood Pressure Categories (ACC/AHA)
 

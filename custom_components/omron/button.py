@@ -44,10 +44,18 @@ async def async_setup_entry(
         entity_category=EntityCategory.CONFIG,
     )
 
+    clear_memory_description = ButtonEntityDescription(
+        key=f"{model_slug}_{identifier}_clear_memory",
+        name=f"{model} {identifier.upper()} Clear Memory",
+        icon="mdi:memory",
+        entity_category=EntityCategory.CONFIG,
+    )
+
     async_add_entities(
         [
             OmronRefreshDataButtonEntity(hass, entry, refresh_description),
             OmronRetryPairingButtonEntity(hass, entry, pairing_retry_description),
+            OmronClearMemoryButtonEntity(hass, entry, clear_memory_description),
         ]
     )
 
@@ -156,3 +164,58 @@ class OmronRetryPairingButtonEntity(ButtonEntity):
         await run_post_pairing_poll(
             self.hass, self._address, paired_session, poll_coordinator
         )
+
+
+class OmronClearMemoryButtonEntity(ButtonEntity):
+    """Button entity to wipe stored measurements from the cuff EEPROM."""
+
+    entity_description: ButtonEntityDescription
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: OmronConfigEntry,
+        description: ButtonEntityDescription,
+    ) -> None:
+        """Initialize entity."""
+        self.hass = hass
+        self.entity_description = description
+        self._entry_id = entry.entry_id
+        self._entry = entry
+        self._address = hass.data[DOMAIN][entry.entry_id]["address"]
+        self._attr_unique_id = description.key
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Attach button to the same BLE device."""
+        return DeviceInfo(
+            connections={(CONNECTION_BLUETOOTH, self._address)},
+        )
+
+    async def async_press(self) -> None:
+        """Overwrite every on-device measurement slot with empty markers."""
+        ble_device = async_ble_device_from_address(self.hass, self._address)
+        if ble_device is None:
+            raise HomeAssistantError(f"BLE device not available: {self._address}")
+
+        entry_data = self.hass.data[DOMAIN][self._entry_id]
+        session_lock = entry_data["session_lock"]
+        if session_lock.locked():
+            raise HomeAssistantError(
+                f"BLE session already in progress for {self._address}; retry in a moment"
+            )
+
+        data = entry_data["data"]
+        try:
+            async with session_lock:
+                async with omron_poll_ble_telemetry(entry_data):
+                    bytes_written = await data.async_clear_memory(ble_device)
+        except Exception as err:
+            raise HomeAssistantError(
+                f"Failed to clear cuff memory: {err}"
+            ) from err
+
+        if bytes_written <= 0:
+            raise HomeAssistantError(
+                f"Clear memory wrote no record bytes for {self._address}"
+            )

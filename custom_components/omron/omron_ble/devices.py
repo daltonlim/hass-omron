@@ -392,31 +392,37 @@ def get_supported_model_stats() -> dict[str, int]:
 
 
 _HEM_MODEL_CODE_RE = re.compile(r"(HEM-[A-Z0-9_.-]+)", re.IGNORECASE)
+# Consumer / regional catalog codes that are not HEM-* (e.g. U705T).
+_ALT_MODEL_CODE_RE = re.compile(r"\b(U\d{3,4}T(?:-[A-Z0-9_.+]+)?)\b", re.IGNORECASE)
 
 
 def infer_model_id_from_local_name(local_name: str | None) -> str | None:
-    """Return a catalog model id if the BLE local name embeds a known HEM-* code.
+    """Return a catalog model id if the BLE local name embeds a known model code.
 
     Many Omron cuffs advertise a name like ``HEM-7600T`` or ``Omron … HEM-7322T-D``;
-    manufacturer data alone usually does not include the full model string. The mobile
-    app can read additional identifiers after connecting; this only uses passive scan data.
+    some regional SKUs use consumer codes such as ``U705T``. Manufacturer data
+    alone usually does not include the full model string. The mobile app can read
+    additional identifiers after connecting; this only uses passive scan data.
     """
     if not local_name or not str(local_name).strip():
         return None
-    match = _HEM_MODEL_CODE_RE.search(str(local_name).strip())
-    if not match:
-        return None
-    token = match.group(1).strip()
-    candidates = {
-        token,
-        token.upper(),
-        token.replace(" ", ""),
-        token.upper().replace(" ", ""),
-    }
+    text = str(local_name).strip()
     supported = set(CANONICAL_DEVICE_PROFILES.keys()) | set(MODEL_VARIANT_MAP.keys())
-    for cand in candidates:
-        if cand in supported:
-            return cand
+
+    for pattern in (_HEM_MODEL_CODE_RE, _ALT_MODEL_CODE_RE):
+        match = pattern.search(text)
+        if not match:
+            continue
+        token = match.group(1).strip()
+        candidates = {
+            token,
+            token.upper(),
+            token.replace(" ", ""),
+            token.upper().replace(" ", ""),
+        }
+        for cand in candidates:
+            if cand in supported:
+                return cand
     return None
 
 

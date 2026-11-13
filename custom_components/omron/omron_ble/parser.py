@@ -1338,6 +1338,27 @@ class OmronBluetoothDeviceData(BluetoothData):
                 session.client, ble_device.address, session
             )
 
+    async def async_clear_memory(self, ble_device: BLEDevice) -> int:
+        """Connect, open a memory session, and wipe stored measurement slots.
+
+        Returns the number of measurement bytes overwritten with 0xFF.
+        """
+        async with OmronDeviceSession(ble_device, self._device_config) as session:
+            if not await session.verify_parent_service():
+                raise ConnectionError(
+                    f"Required service {self._device_config.parent_service_uuid} "
+                    f"not found on device {ble_device.address}"
+                )
+            async with session.memory_session_after_unlock():
+                bytes_written = await self._driver.clear_stored_records(session)
+            _LOGGER.info(
+                "Cleared %d measurement byte(s) on %s (%s)",
+                bytes_written,
+                ble_device.address,
+                self._device_config.model,
+            )
+            return bytes_written
+
     async def _async_sync_current_time_with_client(
         self, client: BleakClient, address: str,
         transport: OmronDeviceSession | None = None,

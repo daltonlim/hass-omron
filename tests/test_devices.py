@@ -1,5 +1,6 @@
 """devices.py / device_catalog.py 단위 테스트."""
 from custom_components.omron.omron_ble.const import DEFAULT_DEVICE_MODEL
+from custom_components.omron.omron_ble.device_catalog import CANONICAL_DEVICE_PROFILES
 from custom_components.omron.omron_ble.devices import (
     BondPolicy,
     ConnectType,
@@ -10,6 +11,7 @@ from custom_components.omron.omron_ble.devices import (
     UnlockMode,
     get_device_config,
     get_supported_models,
+    infer_model_id_from_local_name,
     resolve_profile_model_id,
 )
 
@@ -307,11 +309,28 @@ class TestCatalogResolution:
         assert resolve_profile_model_id("HEM-7035T2-SH") == "HEM-7142T2"
         assert resolve_profile_model_id("U705T") == "HEM-7142T2"
 
+    def test_u705t_uses_hem7142t2_profile_and_keeps_own_model_label(self):
+        cfg = get_device_config("U705T")
+        assert cfg.model == "U705T"
+        assert resolve_profile_model_id("U705T") == "HEM-7142T2"
+        assert cfg.user_start_addresses == [0x02E8]
+        assert cfg.per_user_records_count == [14]
+        assert cfg.settings_read_address == 0x0260
+        assert cfg.settings_write_address == 0x02A4
+        assert "U705T" in get_supported_models()
+
+    def test_infer_model_id_from_local_name_supports_u705t_and_hem(self):
+        assert infer_model_id_from_local_name("U705T") == "U705T"
+        assert infer_model_id_from_local_name("Omron U705T BP") == "U705T"
+        assert infer_model_id_from_local_name("HEM-7142T2") == "HEM-7142T2"
+        assert infer_model_id_from_local_name("BLEsmart_00000123") is None
+
     def test_all_readme_supported_models_are_resolvable_and_in_dropdown(self):
         readme_models = [
             "HEM-6161T",
             "HEM-6232T",
             "HEM-7142T2",
+            "U705T",
             "HEM-7146T2",
             "HEM-7151T",
             "HEM-7155T",
@@ -326,10 +345,12 @@ class TestCatalogResolution:
         for m in readme_models:
             assert m in supported, f"{m} from README should be in UI dropdown"
             profile = resolve_profile_model_id(m)
-            assert profile != DEFAULT_DEVICE_MODEL or m == DEFAULT_DEVICE_MODEL
+            # Variants of the default profile (e.g. U705T → HEM-7142T2) are fine.
+            assert profile in CANONICAL_DEVICE_PROFILES
             cfg = get_device_config(m)
             assert cfg is not None
             assert cfg.model == m
+            assert resolve_profile_model_id(cfg.model) == profile
 
     def test_transmission_block_size_limits(self):
         assert get_device_config("HEM-7600T").transmission_block_size == 0x2C
